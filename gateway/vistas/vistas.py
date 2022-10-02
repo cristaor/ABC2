@@ -126,11 +126,11 @@ class VistaEventosSensores(Resource):
 class VistaLogin(Resource):
     def post(self):
         instance1=os.environ.get("AUTHORIZATOR","localhost")
-        port=os.environ.get("AUTHORIZATOR_PORT","localhost")
-        return requests.post(f"http://{instance1}:{port}/authorizator", json={"user":request.json["user"],
-                                                                       "password":request.json["password"]}).text  
+        port=os.environ.get("AUTHORIZATOR_PORT","5000")
+        response = requests.post(f"http://{instance1}:{port}/authorizator", json={"user":request.json.get("user",""),
+                                                                       "password":request.json.get("password","")})
+        return response.json(), response.status_code  
         
-
 class VistaNotificacion(Resource):
     def post(self):
         aux_payload= str(json.dumps(request.json))
@@ -146,6 +146,8 @@ class VistaNotificacion(Resource):
                     'sensor_type':'PANICO', 
                      'event_type':request.json["tipo_evento"]
                     }
+        
+        
         instance1=os.environ.get("NOTIFICATION","localhost")
         port=os.environ.get("NOTIFICATION_PORT","localhost")
         requests.post(f"http://{instance1}:{port}/notificacion", json=payload2)
