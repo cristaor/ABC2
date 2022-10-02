@@ -20,7 +20,7 @@ class VistaAuthorizator(Resource):
         #db.session.commit()
         return {"msg": "Autorización recibida exitosamente", "access_token": access_token}
     
-    @jwt_required
+    @jwt_required()
     def get(self):
 
         return {"msg": "Token Valido"}

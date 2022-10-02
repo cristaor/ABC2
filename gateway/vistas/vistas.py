@@ -1,13 +1,14 @@
+from enum import auto
 from flask import request
 from flask_jwt_extended import jwt_required, create_access_token
 from flask_restful import Resource
-from sqlalchemy.exc import IntegrityError
 import os
 from modelos import db, Central, CentralSchema, Cliente, ClienteSchema, Ubicacion, UbicacionSchema, Sensor, SensorSchema, Evento, EventoSchema, ValidatorLog, ValidatorLogSchema
 import re
 import json
 import numbers
 import requests
+import jwt
 
 central_schema = CentralSchema()
 cliente_schema = ClienteSchema()
@@ -15,6 +16,11 @@ ubicacion_schema = UbicacionSchema()
 sensor_schema = SensorSchema()
 evento_schema = EventoSchema()
 validator_schema= ValidatorLogSchema()
+
+class AuthorizationException(Exception):
+    def __init__(self, *args: object, message: str) -> None:
+        super().__init__(message, *args)
+        self.message = message
 
 regex = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
 
@@ -146,16 +152,29 @@ class VistaNotificacion(Resource):
                     'sensor_type':'PANICO', 
                      'event_type':request.json["tipo_evento"]
                     }
-        
+        try:
+            autorizar(request, scope = "post/notifications")
+        except AuthorizationException as e:
+            return {"message":e.message}, 400
         
         instance1=os.environ.get("NOTIFICATION","localhost")
-        port=os.environ.get("NOTIFICATION_PORT","localhost")
+        port=os.environ.get("NOTIFICATION_PORT","4500")
         requests.post(f"http://{instance1}:{port}/notificacion", json=payload2)
         return validator_schema.dump(validator)
 
 
-def autorizar(request) -> None:
+def autorizar(request, scope:str) -> None:
     
     instance1=os.environ.get("AUTHORIZATOR","localhost")
-    port=os.environ.get("AUTHORIZATOR_PORT","localhost")
-    requests.post(f"http://{instance1}:{port}/notificacion", json=payload2)    
+    port=os.environ.get("AUTHORIZATOR_PORT","4500")
+    response = requests.get(f"http://{instance1}:{port}/authorizator", headers={"Authorization":request.headers["Authorization"]})
+    if response.status_code !=200:
+        raise AuthorizationException(message="Token inválido")
+
+    #Validate scope
+    bearer = request.headers["Authorization"]
+    token = bearer.split()[1]  # YourTokenHere
+    data = jwt.decode(token, "secret-phrase", algorithms=['HS256'])
+    scopes = data["scope"].split()
+    if scope not in scopes:
+        raise AuthorizationException(message="Error de permisos de usuario sobre la operación solicita")
