@@ -33,30 +33,42 @@ services:
       - 'app-tier'  
     environment:
       - 'PORT=5000'
-      - 'INSTANCE1=notification1'
-      - 'INSTANCE2=notification2'
-      - 'INSTANCE3=notification3'
-      - 'PORT1=8081'
-      - 'PORT2=8082'
-      - 'PORT3=8083'
+      - 'NOTIFICATION_PORT=5001'
+      - 'NOTIFICATION=notification'
     ports:
       - "5000:5000"
+
   notification:
     build: ./notification-processor/.  
     networks:
       - 'app-tier'  
     environment:
       - 'instance=1'
-      - 'PORT=8081'
+      - 'PORT=5001'
       - 'POSTGRES_HOST=db'
       - 'POSTGRES_PORT=5432'
       - 'POSTGRES_USER=postgres'
       - 'POSTGRES_DB=postgres'
     ports:
-      - "8081:8081"
+      - "5001:5001"
     depends_on:
       db:
         condition: service_healthy
+  authorizator:
+    build: ./authorizator/.  
+    networks:
+      - 'app-tier'  
+    environment:
+      - 'PORT=5002'
+      - 'POSTGRES_HOST=db'
+      - 'POSTGRES_PORT=5432'
+      - 'POSTGRES_USER=postgres'
+      - 'POSTGRES_DB=postgres'
+    ports:
+      - "5002:5002"
+    depends_on:
+      db:
+        condition: service_healthy        
 volumes:
   postgresql_data:
     driver: local

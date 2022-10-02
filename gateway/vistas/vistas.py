@@ -99,6 +99,7 @@ class VistaSensoresUbicacion(Resource):
         return [sensor_schema.dump(ca) for ca in ubicacion.sensores]
 
 
+
 class VistaEventosSensores(Resource):
     def post(self, id_sensor):
         sensor = Sensor.query.get_or_404(id_sensor)
@@ -122,6 +123,13 @@ class VistaEventosSensores(Resource):
         sensor = Sensor.query.get_or_404(id_sensor)
         return [evento_schema.dump(ca) for ca in sensor.eventos]
 
+class VistaLogin(Resource):
+    def post(self):
+        instance1=os.environ.get("AUTHORIZATOR","localhost")
+        port=os.environ.get("AUTHORIZATOR_PORT","localhost")
+        return requests.post(f"http://{instance1}:{port}/authorizator", json={"user":request.json["user"],
+                                                                       "password":request.json["password"]}).text  
+        
 
 class VistaNotificacion(Resource):
     def post(self):
@@ -138,13 +146,14 @@ class VistaNotificacion(Resource):
                     'sensor_type':'PANICO', 
                      'event_type':request.json["tipo_evento"]
                     }
-        instance1=os.environ.get("INSTANCE1","localhost")
-        instance2=os.environ.get("INSTANCE2","localhost")
-        instance3=os.environ.get("INSTANCE3","localhost")
-        port1=os.environ.get("PORT1","8081")
-        port2=os.environ.get("PORT2","8081")
-        port3=os.environ.get("PORT3","8081")
-        requests.post(f"http://{instance1}:{port1}/notificacion", json=payload2)
-        requests.post(f"http://{instance2}:{port2}/notificacion", json=payload2)
-        requests.post(f"http://{instance3}:{port3}/notificacion", json=payload2)
+        instance1=os.environ.get("NOTIFICATION","localhost")
+        port=os.environ.get("NOTIFICATION_PORT","localhost")
+        requests.post(f"http://{instance1}:{port}/notificacion", json=payload2)
         return validator_schema.dump(validator)
+
+
+def autorizar(request) -> None:
+    
+    instance1=os.environ.get("AUTHORIZATOR","localhost")
+    port=os.environ.get("AUTHORIZATOR_PORT","localhost")
+    requests.post(f"http://{instance1}:{port}/notificacion", json=payload2)    
