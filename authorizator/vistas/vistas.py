@@ -1,7 +1,6 @@
-from urllib import request
 from flask_restful import Resource
 from flask_jwt_extended import jwt_required, create_access_token
-
+from flask import request
 #authorizator_schema = AuthorizatorSchema()
 
 class VistaAuthorizator(Resource):
@@ -9,7 +8,7 @@ class VistaAuthorizator(Resource):
     def post(self):
         #authorizator = Authorizator()
         
-        if request.json['user']:
+        if not request.json.get('password',None):
             return "Invalir user or password", 404
         identity=request.json['user']
         additional_claims = {"scope": "get/health"}
