@@ -4,7 +4,7 @@ from flask_jwt_extended import JWTManager
 from flask_restful import Api
 import os
 from modelos import db, SensorSchema, Sensor, TipoSensor, Central, CentralSchema, Cliente, ClienteSchema, Evento, Ubicacion, UbicacionSchema
-from vistas import VistaCentral, VistaClientesCentral, VistaUbicacionesCliente, VistaSensoresUbicacion, VistaEventosSensores, VistaNotificacion
+from vistas import VistaHealth,VistaLogin, VistaCentral, VistaClientesCentral, VistaUbicacionesCliente, VistaSensoresUbicacion, VistaEventosSensores, VistaNotificacion
 
 from faker import Faker
 from faker.generator import random
@@ -33,8 +33,13 @@ api.add_resource(VistaUbicacionesCliente, '/cliente/<int:id_cliente>/ubicaciones
 api.add_resource(VistaSensoresUbicacion, '/ubicacion/<int:id_ubicacion>/sensores')
 api.add_resource(VistaEventosSensores, '/sensor/<int:id_sensor>/eventos')
 api.add_resource(VistaNotificacion, '/notificacion')
+api.add_resource(VistaLogin, '/login')
+api.add_resource(VistaHealth, '/health')
 
+"""
 
+jwt = JWTManager(app)
+"""
 
 with app.app_context():
     data_factory = Faker()

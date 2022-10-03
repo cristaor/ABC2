@@ -133,8 +133,10 @@ class VistaLogin(Resource):
     def post(self):
         instance1=os.environ.get("AUTHORIZATOR","localhost")
         port=os.environ.get("AUTHORIZATOR_PORT","5000")
+        print(request.json)
         response = requests.post(f"http://{instance1}:{port}/authorizator", json={"user":request.json.get("user",""),
                                                                        "password":request.json.get("password","")})
+        print(response)
         return response.json(), response.status_code  
         
 class VistaNotificacion(Resource):
@@ -163,11 +165,22 @@ class VistaNotificacion(Resource):
         return validator_schema.dump(validator)
 
 
+class VistaHealth(Resource):
+    def get(self):
+        try:
+            autorizar(request, scope = "get/health")
+        except AuthorizationException as e:
+            return {"message":e.message}, 400
+        
+
+        return "ok",200
+
 def autorizar(request, scope:str) -> None:
     
     instance1=os.environ.get("AUTHORIZATOR","localhost")
     port=os.environ.get("AUTHORIZATOR_PORT","4500")
-    response = requests.get(f"http://{instance1}:{port}/authorizator", headers={"Authorization":request.headers["Authorization"]})
+    response = requests.get(f"http://{instance1}:{port}/authorizator", 
+                            headers={"Authorization":request.headers["Authorization"]})
     if response.status_code !=200:
         raise AuthorizationException(message="Token inválido")
 
