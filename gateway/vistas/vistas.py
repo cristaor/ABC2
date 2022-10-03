@@ -1,20 +1,26 @@
+from enum import auto
 from flask import request
 from flask_jwt_extended import jwt_required, create_access_token
 from flask_restful import Resource
-from sqlalchemy.exc import IntegrityError
 import os
 from modelos import db, Central, CentralSchema, Cliente, ClienteSchema, Ubicacion, UbicacionSchema, Sensor, SensorSchema, Evento, EventoSchema, ValidatorLog, ValidatorLogSchema
 import re
 import json
 import numbers
 import requests
-
+import jwt
+from modelos import IntentoIntruccion
 central_schema = CentralSchema()
 cliente_schema = ClienteSchema()
 ubicacion_schema = UbicacionSchema()
 sensor_schema = SensorSchema()
 evento_schema = EventoSchema()
 validator_schema= ValidatorLogSchema()
+
+class AuthorizationException(Exception):
+    def __init__(self, *args: object, message: str) -> None:
+        super().__init__(message, *args)
+        self.message = message
 
 regex = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
 
@@ -99,6 +105,7 @@ class VistaSensoresUbicacion(Resource):
         return [sensor_schema.dump(ca) for ca in ubicacion.sensores]
 
 
+
 class VistaEventosSensores(Resource):
     def post(self, id_sensor):
         sensor = Sensor.query.get_or_404(id_sensor)
@@ -122,7 +129,16 @@ class VistaEventosSensores(Resource):
         sensor = Sensor.query.get_or_404(id_sensor)
         return [evento_schema.dump(ca) for ca in sensor.eventos]
 
-
+class VistaLogin(Resource):
+    def post(self):
+        instance1=os.environ.get("AUTHORIZATOR","localhost")
+        port=os.environ.get("AUTHORIZATOR_PORT","5000")
+        print(request.json)
+        response = requests.post(f"http://{instance1}:{port}/authorizator", json={"user":request.json.get("user",""),
+                                                                       "password":request.json.get("password","")})
+        print(response)
+        return response.json(), response.status_code  
+        
 class VistaNotificacion(Resource):
     def post(self):
         aux_payload= str(json.dumps(request.json))
@@ -138,13 +154,55 @@ class VistaNotificacion(Resource):
                     'sensor_type':'PANICO', 
                      'event_type':request.json["tipo_evento"]
                     }
-        instance1=os.environ.get("INSTANCE1","localhost")
-        instance2=os.environ.get("INSTANCE2","localhost")
-        instance3=os.environ.get("INSTANCE3","localhost")
-        port1=os.environ.get("PORT1","8081")
-        port2=os.environ.get("PORT2","8081")
-        port3=os.environ.get("PORT3","8081")
-        requests.post(f"http://{instance1}:{port1}/notificacion", json=payload2)
-        requests.post(f"http://{instance2}:{port2}/notificacion", json=payload2)
-        requests.post(f"http://{instance3}:{port3}/notificacion", json=payload2)
+        try:
+            autorizar(request, scope = "post/notifications")
+        except AuthorizationException as e:
+            return {"message":e.message}, 400
+        
+        instance1=os.environ.get("NOTIFICATION","localhost")
+        port=os.environ.get("NOTIFICATION_PORT","4500")
+        requests.post(f"http://{instance1}:{port}/notificacion", json=payload2)
         return validator_schema.dump(validator)
+
+
+class VistaHealth(Resource):
+    def get(self):
+        try:
+            autorizar(request, scope = "get/health")
+        except AuthorizationException as e:
+            return {"message":e.message}, 400
+        
+
+        return "ok",200
+from datetime import datetime
+
+import time
+def get_now() -> str:
+    return datetime.now().strftime('%Y-%m-%d %H:%M:%S');
+
+def autorizar(request, scope:str) -> None:
+    
+    instance1=os.environ.get("AUTHORIZATOR","localhost")
+    port=os.environ.get("AUTHORIZATOR_PORT","4500")
+    
+    response = requests.get(f"http://{instance1}:{port}/authorizator", 
+                            headers=request.headers)
+    if response.status_code !=200:
+        
+        intento = IntentoIntruccion(id = int(time.time()*1000),
+                                    recurso=scope,
+                                    mensaje = json.dumps(request.get_json()),
+                                    token=request.headers.get("Authorization"),
+                                    fecha=get_now(), 
+                                    )
+        db.session.add(intento)
+        db.session.commit()
+        raise AuthorizationException(message="Token inválido")
+
+    #Validate scope
+    bearer = request.headers.get("Authorization")
+    token = bearer.split()[1]  # YourTokenHere
+    data = jwt.decode(token, "secret-phrase", algorithms=['HS256'])
+    scopes = data["scope"].split()
+    if scope not in scopes:
+        raise AuthorizationException(message="Error de permisos de usuario sobre la operación solicita")
