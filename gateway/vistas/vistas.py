@@ -9,7 +9,7 @@ import json
 import numbers
 import requests
 import jwt
-
+from modelos import IntentoIntruccion
 central_schema = CentralSchema()
 cliente_schema = ClienteSchema()
 ubicacion_schema = UbicacionSchema()
@@ -174,18 +174,33 @@ class VistaHealth(Resource):
         
 
         return "ok",200
+from datetime import datetime
+
+import time
+def get_now() -> str:
+    return datetime.now().strftime('%Y-%m-%d %H:%M:%S');
 
 def autorizar(request, scope:str) -> None:
     
     instance1=os.environ.get("AUTHORIZATOR","localhost")
     port=os.environ.get("AUTHORIZATOR_PORT","4500")
+    
     response = requests.get(f"http://{instance1}:{port}/authorizator", 
-                            headers={"Authorization":request.headers["Authorization"]})
+                            headers=request.headers)
     if response.status_code !=200:
+        
+        intento = IntentoIntruccion(id = int(time.time()*1000),
+                                    recurso=scope,
+                                    mensaje = json.dumps(request.get_json()),
+                                    token=request.headers.get("Authorization"),
+                                    fecha=get_now(), 
+                                    )
+        db.session.add(intento)
+        db.session.commit()
         raise AuthorizationException(message="Token inválido")
 
     #Validate scope
-    bearer = request.headers["Authorization"]
+    bearer = request.headers.get("Authorization")
     token = bearer.split()[1]  # YourTokenHere
     data = jwt.decode(token, "secret-phrase", algorithms=['HS256'])
     scopes = data["scope"].split()

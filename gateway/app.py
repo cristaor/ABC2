@@ -11,10 +11,18 @@ from faker.generator import random
 from datetime import datetime
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///ABC.db'
+# BD sin usuario ni contraseña
+host = os.getenv('POSTGRES_HOST','localhost')
+user = os.getenv('POSTGRES_USER','postgres')
+database = os.getenv('POSTGRES_DB','postgres')
+port = os.getenv('POSTGRES_PORT',6379)
+DATABASE_CONNECTION_URI = f'postgresql+psycopg2://{user}@{host}:{port}/{database}'
+app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_CONNECTION_URI
+
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['JWT_SECRET_KEY'] = 'frase-secreta'
 app.config['PROPAGATE_EXCEPTIONS'] = True
+
 
 app_context = app.app_context()
 app_context.push()

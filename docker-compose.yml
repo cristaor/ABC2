@@ -37,10 +37,15 @@ services:
       - 'NOTIFICATION=notification'
       - 'AUTHORIZATOR_PORT=5002'
       - 'AUTHORIZATOR=authorizator'
-
+      - 'POSTGRES_HOST=db'
+      - 'POSTGRES_PORT=5432'
+      - 'POSTGRES_USER=postgres'
+      - 'POSTGRES_DB=postgres'
     ports:
       - "5000:5000"
-
+    depends_on:
+      db:
+        condition: service_healthy
   notification:
     build: ./notification-processor/.  
     networks:
